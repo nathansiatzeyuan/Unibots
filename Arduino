@@ -1,0 +1,89 @@
+const int irSensorPin = A0; // define the pin for the IR sensor
+int irSensorValue; // variable to store the IR sensor reading
+// Define the motor control pins
+int enA = 9;
+int in1 = 2;
+int in2 = 3;
+int in3 = 4;
+int in4 = 5;
+int enB = 10;
+bool Searching= true;
+bool Moving= false;
+bool Yellow= true;
+
+
+void setup() {
+  // Set the motor control pins as outputs
+  pinMode(enA, OUTPUT);
+  pinMode(enB, OUTPUT);
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(in3, OUTPUT);
+  pinMode(in4, OUTPUT);
+    // initialize serial communication
+  Serial.begin(9600);
+
+
+  // Set the PWM frequency to 20kHz
+  TCCR1B = (TCCR1B & 0b11111000) | 0x02;
+}
+
+void loop() {
+  int motorSpeed=1000;
+
+    // read the value from the IR sensor
+  irSensorValue = analogRead(irSensorPin);
+
+  // print the sensor value to the serial monitor
+
+  Serial.println(irSensorValue);
+
+
+  // Set the motor speeds
+  analogWrite(enA, 1000);
+  analogWrite(enB, 1000);
+
+  while (Serial.available()>0){
+    int message = Serial.read();
+    if (message=1){
+     //Turn Left
+        digitalWrite(in1, LOW);
+        digitalWrite(in2, LOW);
+        digitalWrite(in3, HIGH);
+        digitalWrite(in4, LOW);
+        Serial.println("Turning Left");
+        } 
+
+    else if(message=2){
+      digitalWrite(in1, HIGH);
+      digitalWrite(in2, LOW);
+      digitalWrite(in3, LOW);
+      digitalWrite(in4, LOW);
+      Serial.println("Turning Right");
+    }
+
+   else if(message=3){
+      digitalWrite(in1, HIGH);
+      digitalWrite(in2, LOW);
+      digitalWrite(in3, HIGH);
+      digitalWrite(in4, LOW);
+      Serial.println("Moving Forwards");
+    }
+
+    else if(message=4){
+      digitalWrite(in1, LOW);
+      digitalWrite(in2, LOW);
+      digitalWrite(in3, HIGH);
+      digitalWrite(in4, LOW);
+      Serial.println("Rotating");
+    }
+    else{
+          digitalWrite(in1, LOW);
+      digitalWrite(in2, LOW);
+      digitalWrite(in3, LOW);
+      digitalWrite(in4, LOW);
+
+    }
+  }
+
+  }
