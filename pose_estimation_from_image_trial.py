@@ -22,10 +22,10 @@ tags = {3: (np.array([[-0.3],[0],[0]]) ,np.array([[1,0,0],[0,1,0],[0,0,1]])), 0:
 sum = np.array([[0],[0],[0]])
 for r in results:
     est_position =  tags[r.tag_id][0] + tags[r.tag_id][1] @ r.pose_R.T @ r.pose_t * -1
-#    print("tagid")
- #   print(r.tag_id)
-  #  print("position:")
-   # print(est_position)
+    print("tagid")
+    print(r.tag_id)
+    print("est pose r:")
+    print(r.pose_R)
     sum = sum + est_position
 print("position:")
 print(sum/len(results))
