@@ -60,7 +60,7 @@ while True:
 cv2.destroyAllWindows()
 ser.close()
 
-/*import cv2
+import cv2
 from picamera2 import Picamera2
 import time
 import numpy as np
@@ -113,7 +113,8 @@ while True:
             for contour in contours:
                 x1, y1, width, height = cv2.boundingRect(contour)
                 cv2.rectangle(frame, (x1, y1), (x1+width, y1+height), (0,0,255), 2)
-                if cv2.pointPolygonTest(contour,(x,y),False) >= 0:
+                pt = (float(x), float(y))
+                if cv2.pointPolygonTest(contour,pt,False) >= 0:
                     intersect = True
                     break
                 #if the circle intersects, draw it
@@ -145,5 +146,4 @@ while True:
         
 
 cv2.destroyAllWindows()
-ser.close()*/
-
+ser.close()
