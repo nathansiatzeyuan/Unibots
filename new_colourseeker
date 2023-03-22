@@ -43,7 +43,7 @@ while True:
     x_distances.sort()
     
     #send x_distances to arduino
-    if len(x_distances) >= 0:
+    if len(x_distances) > 0:
         closest_distance = x_distances[0][1]
         ser.write(str(closest_distance).encode())
         line = ser.readline().decode('utf-8').rstrip()
