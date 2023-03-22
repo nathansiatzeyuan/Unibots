@@ -147,3 +147,73 @@ while True:
 
 cv2.destroyAllWindows()
 ser.close()
+
+#import cv2
+from picamera2 import Picamera2
+import time
+import numpy as np
+import serial
+import threading
+
+
+def send_data(ser, closest_distance):
+    ser.write(str(closest_distance).encode())
+    line = ser.readline().decode('utf-8').rstrip()
+    print(line)
+
+
+def process_image(pc, ser):
+    lower_bound = np.array([15,100,100]) # Colour range for filtering for non-white balls
+    upper_bound = np.array([45,255,255])
+    dispW = 640
+    dispH = 360
+    pc.preview_configuration.main.size = (dispW, dispH)
+    pc.preview_configuration.main.format = "RGB888"
+    pc.preview_configuration.align()
+    pc.configure("preview")
+    pc.start()
+    x_distances = []
+    while True:
+        frame = pc.capture_array()
+        frame_blur = cv2.medianBlur(frame, 15)
+        frame_hsv = cv2.cvtColor(frame_blur, cv2.COLOR_BGR2HSV)
+        my_mask = cv2.inRange(frame_hsv, lower_bound, upper_bound)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.5, 100)
+        if circles is not None:
+            circles = np.round(circles[0,:].astype("int"))
+            for (x, y, r) in circles:
+                intersect = False
+                for contour in contours:
+                    x1, y1, width, height = cv2.boundingRect(contour)
+                    cv2.rectangle(frame, (x1, y1), (x1+width, y1+height), (0,0,255), 2)
+                    pt = (float(x), float(y))
+                    if cv2.pointPolygonTest(contour,pt,False) >= 0:
+                        intersect = True
+                        break
+                if intersect:
+                    cv2.circle(frame, (x, y), r, (0,255,0), 3)
+        contours, hierarchy = cv2.findContours(my_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        x_distances = []
+        for c in contours:
+            x, y, width, height = cv2.boundingRect(c)
+            cv2.rectangle(frame, (x, y), (x+width, y+height), (0,0,255), 2)
+            centre_distance = int(dispW / 2) - (x + width/2)
+            x_distances.append([abs(centre_distance), centre_distance])
+        x_distances.sort()
+        if len(x_distances) > 0:
+            closest_distance = x_distances[0][1]
+            threading.Thread(target=send_data, args=(ser, closest_distance)).start()
+        cv2.imshow("Camera", frame)
+        cv2.imshow('my Mask',my_mask)
+        if cv2.waitKey(1)==ord('q'):
+            break
+    cv2.destroyAllWindows()
+    ser.close()
+
+
+if __name__ == '__main__':
+    ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
+    pc = Picamera2()
+    threading.Thread(target=process_image, args=(pc, ser)).start()
+
