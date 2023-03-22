@@ -9,9 +9,11 @@ int in2 = 3;
 int in3 = 4;
 int in4 = 5;
 int enB = 10;
+
 bool Searching= true;
 bool Moving= false;
 bool Yellow= true;
+
 
 void setup() {
   // Set the motor control pins as outputs
@@ -29,11 +31,12 @@ void setup() {
 }
 
 void loop() {
-  int motorSpeed=1000; 
+  int motorSpeed=400; 
+  int range=5; //if the ball is inside this range, the robot will move foward
 
    // Set the motor speeds
-  analogWrite(enA, 1000);
-  analogWrite(enB, 1000);
+  analogWrite(enA, motorSpeed);
+  analogWrite(enB, motorSpeed);
 
   while (Serial.available() > 0) {
     distance = Serial.parseInt();
@@ -42,7 +45,7 @@ void loop() {
     
     // conditions
 
-    if (distance>5) {
+    if (distance>range) {
       //turn left
         digitalWrite(in1, LOW);
         digitalWrite(in2, LOW);
@@ -50,7 +53,7 @@ void loop() {
         digitalWrite(in4, LOW);
     }
 
-    if (distance<-5) {
+    if (distance<-range) {
       //turn right
         digitalWrite(in1, HIGH);
         digitalWrite(in2, LOW);
@@ -58,7 +61,7 @@ void loop() {
         digitalWrite(in4, LOW);
     }
 
-    if (distance<=5) {
+    if (distance<=range && distance>=-range) {
       //move forward
         digitalWrite(in1, HIGH);
         digitalWrite(in2, LOW);
@@ -70,4 +73,3 @@ void loop() {
     }
 
   }
-}
