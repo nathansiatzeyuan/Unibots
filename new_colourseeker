@@ -60,93 +60,68 @@ while True:
 cv2.destroyAllWindows()
 ser.close()
 
-import cv2
+import cv2 
 from picamera2 import Picamera2
 import time
 import numpy as np
 import serial
+import threading
 
 
-ser = serial.Serial('/dev//ttyACM0', 9600, timeout=1)
+def send_data(ser, closest_distance):
+    ser.write(str(closest_distance).encode())
+    line = ser.readline().decode('utf-8').rstrip()
+    print(line)
 
 
-pc = Picamera2()
-dispW=1280
-dispH=720
-
-pc.preview_configuration.main.size=(dispW,dispH)
-pc.preview_configuration.main.format="RGB888"
-pc.preview_configuration.align()
-pc.configure("preview")
-pc.start()
-
-lowerBound=np.array([15,100,100])#colour range for filtering for non-white balls
-upperBound=np.array([45,255,255]) 
-while True:
-    frame = pc.capture_array()
-    frameBlur= cv2.blur(frame, (15,15))
-    frameBlur = cv2.GaussianBlur(frameBlur, (11,11), 0)
-    #can also apply median or bilateral blurring based on iteration
-    frameHSV=cv2.cvtColor(frameBlur,cv2.COLOR_BGR2HSV)
-    
-    
-    
-    myMask=cv2.inRange(frameHSV,lowerBound,upperBound)
-    #myMask = cv2.erode(myMask, None, iterations = 2)
-    #myMask = cv2.dilate(myMask, None, iterations = 2)
-    #closest_centre_distance = 10000
+def process_image(pc, ser):
+    lower_bound = np.array([20,100,100]) # Colour range for filtering for non-white balls
+    upper_bound = np.array([30,255,255])
+    dispW = 640
+    dispH = 360
+    pc.preview_configuration.main.size = (dispW, dispH)
+    pc.preview_configuration.main.format = "RGB888"
+    pc.preview_configuration.align()
+    pc.configure("preview")
+    pc.start()
     x_distances = []
-    contours, hierarchy = cv2.findContours(myMask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-      
-    flippedMask = cv2.bitwise_not(myMask)
-    #frame_minus_colour = cv2.bitwise_and(frame, frame, mask=flippedMask)
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  #either frame or frame minus colour
-    
-    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.5, 100)
-
-                
-    if circles is not None:
-        circles = np.round(circles[0,:].astype("int"))
-        for (x, y, r) in circles:
-            intersect=False
-             #Check if the circle intersects with the contours
-            for contour in contours:
-                x1, y1, width, height = cv2.boundingRect(contour)
-                cv2.rectangle(frame, (x1, y1), (x1+width, y1+height), (0,0,255), 2)
-                pt = (float(x), float(y))
-                if cv2.pointPolygonTest(contour,pt,False) >= 0:
-                    intersect = True
-                    break
-                #if the circle intersects, draw it
-            if intersect:
-                cv2.circle(frame, (x, y), r, (0,255,0), 3) #centre,coordinate,colour,line thickness
-       
-    
-    
-    for c in contours:
-        x, y, width, height = cv2.boundingRect(c)
-        cv2.rectangle(frame, (x, y), (x+width, y+height), (0,0,255), 2)
-        centre_distance = int(dispW / 2) - (x + width/2)
-        x_distances.append([abs(centre_distance), centre_distance])
-    x_distances.sort()
-    
-    #send x_distances to arduino
-    if len(x_distances) > 0:
-        closest_distance = x_distances[0][1]
-        ser.write(str(closest_distance).encode())
-        line = ser.readline().decode('utf-8').rstrip()
-        print(line)
-        #time.sleep(1)
-    
-    cv2.imshow("Camera", frame)
-    cv2.imshow('my Mask',myMask)
-    
-    if cv2.waitKey(1)==ord('q'):
-        break
+    while True:
         
+        frame = pc.capture_array()
+        frame_blur = cv2.medianBlur(frame, 15)
+        frame_hsv = cv2.cvtColor(frame_blur, cv2.COLOR_BGR2HSV)
+        my_mask = cv2.inRange(frame_hsv, lower_bound, upper_bound)
+        contours, hierarchy = cv2.findContours(my_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        contours1=[]
+        cv2.line(frame, (420, 0), (420, dispH), (0, 255, 0), thickness=2)
+        cv2.line(frame, (220, 0), (220, dispH), (0, 255, 0), thickness=2)
+        x_distances = []
+        for c in contours:
+            x, y, width, height = cv2.boundingRect(c)
+            if (y+(height/2)) > dispH/2 -200 and 250<(height*width)<10000: #ASSUME area=100x100
+                cv2.rectangle(frame, (x, y), (x+width, y+height), (0,0,255), 2)
+                centre_distance = int(dispW / 2) - (x + width/2)
+                x_distances.append([abs(centre_distance), centre_distance])
+            else:
+                pass
+        x_distances.sort()
+        if len(x_distances) > 0:
+            closest_distance = x_distances[0][1]
+            threading.Thread(target=send_data, args=(ser, closest_distance)).start()
+        cv2.imshow("Camera", frame)
+        cv2.imshow('my Mask',my_mask)
+        if cv2.waitKey(1)==ord('q'):
+            break
+    cv2.destroyAllWindows()
+    ser.close()
 
-cv2.destroyAllWindows()
-ser.close()
+
+if __name__ == '__main__':
+    ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+    pc = Picamera2()
+    threading.Thread(target=process_image, args=(pc, ser)).start()
+
 
 #import cv2
 from picamera2 import Picamera2
