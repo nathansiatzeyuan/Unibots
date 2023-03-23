@@ -1,0 +1,25 @@
+
+const int TIME_THRESHOLD_SECONDS = 150;
+unsigned long start_time = 0;
+
+void setup() {
+Serial.begin (9600)
+
+}
+
+void loop() {
+  // Get the current time
+  unsigned long current = millis() / 1000;
+  
+  
+  // Check if the threshold has been reached
+  if (current - start_time >= TIME_THRESHOLD_SECONDS) {
+    Serial.println("Time threshold reached!");
+    
+    //still trying to figure out how to rotate and scan
+    
+  }
+  
+  // Wait for a second
+  delay(1000);
+}
