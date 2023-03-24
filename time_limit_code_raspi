@@ -1,0 +1,63 @@
+import apriltag
+import argparse
+import cv2
+import numpy as np
+from pupil_apriltags import Detector
+import serial
+
+ser = serial.Serial('/dev//ttyACM0', 9600, timeout=1)
+
+#takes and image file as an inpit and reads the image using OpenCV
+ap = argparse.ArgumentParser()
+ap.add_argument("-i", "--image", required = True)
+args = vars(ap.parse_args())
+image = cv2.imread(args["image"])
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #converts image into grayscle
+
+params = (314.22174729465604, 311.4202447283487, 337.0278425306902, 238.99954338265644) #camera parameters
+
+print("got image")
+detector = Detector(families="tag36h11")
+results = detector.detect(gray, estimate_tag_pose=True, camera_params=params, tag_size=0.15)
+print(format(len(results))+ " apriltags detected")
+
+#print(results)
+tags = {3: (np.array([[-0.3],[0],[0]]) ,np.array([[1,0,0],[0,1,0],[0,0,1]])), 0: (np.array([[0],[0],[0]]) ,np.array([[1,0,0],[0,1,0],[0,0,1]])),
+        1: (np.array([[0.3],[0],[0]]) ,np.array([[1,0,0],[0,1,0],[0,0,1]])), 2: (np.array([[0],[0],[0]]) ,np.array([[1,0,0],[0,1,0],[0,0,1]]))}  #id : ( vector t, matrix R)
+sum = np.array([[0],[0],[0]]) #im gonna change the name of this matrix to origin cuz thats what i think it is (previously sum) -jansen
+for r in results:
+    est_position =  tags[r.tag_id][0] + tags[r.tag_id][1] @ r.pose_R.T @ r.pose_t * -1
+    print("tagid")
+    print(r.tag_id)
+    print("est pose r:")
+    print(r.pose_R)
+    sum = sum + est_position
+    position = sum/len(results) 
+print("position:")
+print(position)
+
+target_position = np.array([[0],[0],[0]])
+
+while True: 
+    #Calculate the error between the current position and the origin
+    error = position - target_position 
+
+    #0.05 is an arbitary value, modify to make it a certain distance from the barrier
+    # Send commands to the Arduino to move the robot
+    if abs(error[0]) > 0.05:
+        if error[0] > 0:
+            ser.write(b'forward')  # move forward
+        else:
+            ser.write(b'backwards')  # move backward
+    elif abs(error[1]) > 0.05:
+        if error[1] > 0:
+            ser.write(b'left')  # move left
+        else:
+            ser.write(b'right')  # move right
+    else:
+        ser.write(b'stop')  # stop moving
+
+    # If the error is small enough, break out of the loop and stop the robot
+    if np.linalg.norm(error) < 0.05:
+        ser.write(b's')  # stop moving
+        break
