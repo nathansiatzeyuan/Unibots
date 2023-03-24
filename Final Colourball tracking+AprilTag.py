@@ -76,19 +76,20 @@ def process_image(pc, ser,countdown):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         results = detector.detect(gray, estimate_tag_pose=True, camera_params=params, tag_size=0.15)
         position = np.array([[0],[0],[0]])
+        theta_final = 0
         for r in results:
             est_position =  tags[r.tag_id][0] + tags[r.tag_id][1] @ r.pose_R.T @ r.pose_t * -1
             position = position + est_position/len(results)
             x_rot_vector =  [r.pose_R[0][0], r.pose_R[2][0]]
             est_angle_x = np.arccos(1/(np.sqrt(x_rot_vector[0]**2+ x_rot_vector[1]**2)) * (x_rot_vector[0]))
-            theta_x = theta_x + est_angle_x/len(results)
+            #theta_x = theta_x + est_angle_x/len(results)
             
             z_rot_vector =  [r.pose_R[0][2], r.pose_R[2][2]]
             est_angle_z = np.arccos(1/(np.sqrt(z_rot_vector[0]**2+ z_rot_vector[1]**2)) * (z_rot_vector[1]))
-            theta_z = theta_z + est_angle_z/len(results)
+            #theta_z = theta_z + est_angle_z/len(results)
       
-            theta_final = np.rad2deg(tags[r.tag_id][2] + ((theta_z + theta_x)/2))
-            
+            #theta_final = np.rad2deg(tags[r.tag_id][2] + ((theta_z + theta_x)/2))
+            theta_final = theta_final + ((est_angle_x + est_angle_z)/2 + tags[r.tag_id][2])/len(results)
         cv2.putText(frame, "coords:"+ str(round(float(position[0]), 2)) +", " + str(round(float(position[1]), 2)) +", " + str(round(float(position[2]),2)), (30, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
         
         frame_blur = cv2.medianBlur(frame, 15)
