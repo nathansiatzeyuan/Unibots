@@ -1,0 +1,23 @@
+import threading
+import time
+
+# define the countdown function
+def countdown(t):
+    while t:
+        mins, secs = divmod(t, 60)
+        timer = '{:02d}:{:02d}'.format(mins, secs)
+        print("Time left: ", timer, end="\r")
+        time.sleep(1)
+        t -= 1
+    print("Time is up!")
+
+# start the countdown timer in a separate thread
+t = threading.Thread(target=countdown, args=(60,))
+t.start()
+
+# other code that runs while the countdown timer is active
+while t.is_alive():
+    # do something here
+    pass
+
+
