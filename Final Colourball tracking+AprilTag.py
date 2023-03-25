@@ -74,7 +74,7 @@ def process_image(pc, ser,countdown):
         time.sleep(1)
         frame = capture_frame(pc,delay=0.5)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        results = detector.detect(gray, estimate_tag_pose=True, camera_params=params, tag_size=0.15)
+        results = detector.detect(gray, estimate_tag_pose=True, camera_params=params, tag_size=0.1)
         position = np.array([[0],[0],[0]])
         theta_final = 0
         for r in results:
